@@ -61,6 +61,14 @@ header h1{background:var(--red);color:var(--red-ink);margin:0;padding:12px 16px 
 .card{background:var(--surface);border:1px solid var(--line);padding:16px;display:grid;gap:12px;margin-top:16px;
   clip-path:polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)))}
 label.lbl{display:block;margin-bottom:4px;font:700 .72rem var(--body);text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.histtools{display:flex;justify-content:flex-end;margin-top:14px}
+.searchbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px}
+.searchbtn svg{width:16px;height:16px}
+.searchbtn[aria-expanded="true"]{background:var(--red);border-color:var(--red);color:#fff}
+#histSearch{margin-top:10px}
+.hsfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px}
+input[type=date]{width:100%;font:500 1rem var(--body);padding:11px 12px;border:1px solid var(--line);border-radius:2px;background:var(--field);color:var(--ink)}
+input[type=date]:focus{outline:2px solid var(--red);outline-offset:0;border-color:var(--red)}
 input[type=text],select{width:100%;font:500 1rem var(--body);padding:12px;border:1px solid var(--line);border-radius:2px;background:var(--field);color:var(--ink)}
 input[type=text]::placeholder{color:#6d757e}
 input[type=text]:focus,select:focus{outline:2px solid var(--red);outline-offset:0;border-color:var(--red)}
@@ -216,6 +224,16 @@ details summary{cursor:pointer;color:var(--muted);font-weight:700;padding:6px 2p
 
   <!-- HISTORIAL -->
   <section id="view-hist" hidden>
+    <div class="histtools">
+      <button class="ghost searchbtn" id="histSearchBtn" type="button" aria-expanded="false" aria-controls="histSearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>Buscar
+      </button>
+    </div>
+    <div class="card" id="histSearch" hidden>
+      <div><label class="lbl" for="h-q">Material, proveedor o persona</label><input type="text" id="h-q" placeholder="Ej: cinta, Saltoki, Pablo…"></div>
+      <div><label class="lbl" for="h-date">Fecha de compra</label><input type="date" id="h-date"></div>
+      <div class="hsfoot"><span class="sub" id="h-count"></span><button class="ghost" id="h-clear" type="button">Limpiar</button></div>
+    </div>
     <main id="hist"></main>
   </section>
 
@@ -255,7 +273,7 @@ details summary{cursor:pointer;color:var(--muted);font-weight:700;padding:6px 2p
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const $ = s => document.querySelector(s);
@@ -386,7 +404,7 @@ async function renderLista(){
     const ul = el("ul"); list.forEach(i => ul.append(itemRow(i, names)));
     g.append(h, ul); root.append(g);
   }
-  renderHist(done, names);
+  renderHist(done);
   updateDatalists();
 }
 
@@ -404,12 +422,34 @@ document.addEventListener("click", () => {
   if(histMenu){ histMenu = null; histDel = false; renderLista(); }
   if(proyMenu){ proyMenu = null; proyDel = false; renderProy(); }
 });
-function renderHist(done, names){
+const isoDay = ts => { const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+$("#histSearchBtn").onclick = () => {
+  const open = $("#histSearch").hidden;
+  $("#histSearch").hidden = !open; $("#histSearchBtn").setAttribute("aria-expanded", open);
+  if(open) $("#h-q").focus();
+  else { $("#h-q").value = ""; $("#h-date").value = ""; renderHist(items.filter(i => i.done)); }
+};
+$("#h-q").addEventListener("input", () => renderHist(items.filter(i => i.done)));
+$("#h-date").addEventListener("change", () => renderHist(items.filter(i => i.done)));
+$("#h-clear").onclick = () => { $("#h-q").value = ""; $("#h-date").value = ""; renderHist(items.filter(i => i.done)); $("#h-q").focus(); };
+
+function renderHist(all){
   const root = $("#hist");
   root.replaceChildren();
-  if(!done.length){
+  $("#histSearchBtn").hidden = !all.length;
+  if(!all.length){
     const e = el("div", "empty"); e.append(el("b", null, "Todavía no hay compras"));
     e.append(document.createTextNode("Cuando marques algo como comprado en Por comprar, aparecerá aquí ordenado por día."));
+    root.append(e); return;
+  }
+  const q = norm($("#h-q").value), day = $("#h-date").value;
+  let done = all;
+  if(q) done = done.filter(i => [i.name, i.note, i.qty, i.supplier, i.project, i.byName, i.doneByName].some(v => norm(v).includes(q)));
+  if(day) done = done.filter(i => isoDay(i.doneAt || i.at || 0) === day);
+  $("#h-count").textContent = q || day ? (done.length === 1 ? "1 compra encontrada" : done.length + " compras encontradas") : "";
+  if(!done.length){
+    const e = el("div", "empty"); e.append(el("b", null, "Sin resultados"));
+    e.append(document.createTextNode("No hay compras que coincidan. Prueba con otra palabra u otra fecha."));
     root.append(e); return;
   }
   const days = {};
@@ -619,24 +659,38 @@ renderLista(); renderProy();
 /* ---------- Firebase: every path lives under equipos/<código del equipo>/ ---------- */
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
-const fs = getFirestore(fbApp);
+// Keep a copy of the list on the phone so it opens and accepts changes without coverage
+let fs;
+try{ fs = initializeFirestore(fbApp, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
+catch(_){ fs = getFirestore(fbApp); }
 
+// Writes go to the local copy at once and reach the server when there is connection,
+// so nothing here waits for the server (offline that promise would never settle).
+const sendLater = p => { p.catch(fail); return Promise.resolve(); };
 function makeDb(base){
   return {
     collection(p){
       const ref = collection(fs, base + "/" + p);
       return {
-        add: async data => { const r = await addDoc(ref, data); return {id: r.id}; },
+        add: async data => { const r = doc(ref); sendLater(setDoc(r, data)); return {id: r.id}; },
         onSnapshot: (next, err) => onSnapshot(ref, next, err),
         get: () => getDocs(ref),
       };
     },
     doc(p){
       const ref = doc(fs, base + "/" + p);
-      return { update: d => updateDoc(ref, d), delete: () => deleteDoc(ref) };
+      return { update: d => sendLater(updateDoc(ref, d)), delete: () => sendLater(deleteDoc(ref)) };
     },
   };
 }
+
+function showConnection(){
+  if(navigator.onLine){ if($("#status").dataset.offline){ status(""); delete $("#status").dataset.offline; } }
+  else { status("Sin cobertura. Puedes seguir apuntando: se guardará solo cuando vuelva la conexión."); $("#status").dataset.offline = "1"; }
+}
+addEventListener("online", showConnection);
+addEventListener("offline", showConnection);
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 function loadSession(){ try{ return JSON.parse(localStorage.getItem("sesion") || "null"); }catch(_){ return null; } }
 function saveSession(v){ try{ v ? localStorage.setItem("sesion", JSON.stringify(v)) : localStorage.removeItem("sesion"); }catch(_){} }
@@ -728,8 +782,10 @@ if(location.hostname === "localhost" && location.search.includes("demo")){
 } else (async () => {
   const sess = loadSession();
   if(!sess){ showLogin(); return; }
-  try{ await signInAnonymously(auth); startApp(sess); }
-  catch(_){ startApp(sess); status("Sin conexión. Los cambios se verán cuando vuelva internet."); }
+  // The anonymous sign-in is remembered on the phone, so offline we reuse it instead of signing in again
+  try{ await auth.authStateReady(); if(!auth.currentUser) await signInAnonymously(auth); }catch(_){}
+  startApp(sess);
+  showConnection();
 })();
 </script>
 </body>
