@@ -1,9 +1,12 @@
 // Keeps a copy of the app on the phone so it opens without coverage.
 // The list data itself is cached by Firestore; this only covers the page, its scripts and fonts.
-const CACHE = "lista-material-v1";
+const CACHE = "lista-material-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
+// Drop copies saved by older versions (e.g. the previous icon)
+self.addEventListener("activate", e => e.waitUntil(
+  caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
+));
 
 const save = (req, res) => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; };
 
