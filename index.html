@@ -685,9 +685,29 @@ $("#logout").onclick = () => { const s = loadSession(); saveSession(null); close
 /* Local design preview only: http://localhost:8765/?demo shows sample rows without touching Firebase */
 if(location.hostname === "localhost" && location.search.includes("demo")){
   const now = Date.now(), H = 3600000;
+  // In-memory stand-in for makeDb() so every button works in the preview; nothing is saved
+  const cols = {}, subs = {};
+  const snap = p => ({docs: Object.entries(cols[p] || {}).map(([id, d]) => ({id, data: () => d}))});
+  const emit = p => (subs[p] || []).forEach(f => f(snap(p)));
+  db = {
+    collection: p => ({
+      add: async d => { const id = "m" + Math.random().toString(36).slice(2, 9); (cols[p] = cols[p] || {})[id] = {...d}; emit(p); return {id}; },
+      onSnapshot: f => { (subs[p] = subs[p] || []).push(f); f(snap(p)); return () => { subs[p] = subs[p].filter(x => x !== f); }; },
+      get: async () => snap(p),
+    }),
+    doc: path => {
+      const i = path.lastIndexOf("/"), c = path.slice(0, i), id = path.slice(i + 1);
+      return {
+        update: async d => { cols[c][id] = {...cols[c][id], ...d}; emit(c); },
+        delete: async () => { if(cols[c]) delete cols[c][id]; emit(c); },
+      };
+    },
+  };
+  const seed = (p, rows) => { cols[p] = {}; rows.forEach(({id, ...d}) => cols[p][id] = d); };
+
   myName = "Dani"; $("#me").textContent = myName;
   $("#login").hidden = true; $("#app").hidden = false;
-  items = [
+  seed("items", [
     {id:"d1", name:"Discos de corte 125 mm", qty:"2 cajas", supplier:"Ferretería FEKA", note:"Los finos de inox", urgent:true, done:false, byName:"Pablo", at: now - 2*H},
     {id:"d2", name:"Silicona transparente", qty:"6 uds", supplier:"Ferretería FEKA", done:false, byName:"Dani", at: now - H},
     {id:"d3", name:"Tubo multicapa 16 mm", qty:"20 m", supplier:"Saltoki", project:"Reforma baño C/ Mayor 12", done:false, byName:"Marta", at: now - 30*60000},
@@ -695,9 +715,16 @@ if(location.hostname === "localhost" && location.search.includes("demo")){
     {id:"d5", name:"Cinta americana", done:false, byName:"Luis", at: now - 5*60000},
     {id:"d6", name:"Brocas SDS 8 mm", qty:"3", supplier:"Ferretería FEKA", done:true, byName:"Pablo", doneByName:"Dani", at: now - 30*H, doneAt: now - 26*H},
     {id:"d7", name:"Tacos nylon 8", qty:"1 caja", supplier:"Otros", done:true, byName:"Luis", doneByName:"Marta", at: now - 5*H, doneAt: now - 2*H},
-  ];
-  proys = [{id:"p1", name:"Reforma baño C/ Mayor 12", at: now - 50*H}, {id:"p2", name:"Portal 3 iluminación", at: now - 120*H}];
-  renderLista(); renderProy();
+  ]);
+  seed("proyectos", [{id:"p1", name:"Reforma baño C/ Mayor 12", at: now - 50*H}, {id:"p2", name:"Portal 3 iluminación", at: now - 120*H}]);
+  seed("proyectos/p1/materiales", [
+    {id:"m1", name:"Tubo multicapa 16 mm", qty:"20 m", supplier:"Saltoki", itemId:"d3", at: now - 40*H},
+    {id:"m2", name:"Plato de ducha 80x120", qty:"1", supplier:"Saltoki", note:"Blanco, antideslizante", at: now - 39*H},
+    {id:"m3", name:"Silicona sanitaria", qty:"2", supplier:"Ferretería FEKA", at: now - 38*H},
+  ]);
+  applyWrite();
+  db.collection("items").onSnapshot(s => { items = s.docs.map(d => ({id:d.id, ...d.data()})); renderLista(); renderProy(); });
+  db.collection("proyectos").onSnapshot(s => { proys = s.docs.map(d => ({id:d.id, ...d.data()})); renderProy(); });
 } else (async () => {
   const sess = loadSession();
   if(!sess){ showLogin(); return; }
