@@ -1,0 +1,547 @@
+<title>Lista de Material</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one phone column; sticky header with tabs, add-form card, list grouped by supplier like an albarán */
+:root{
+  --bg:#eef0f2; --surface:#ffffff; --ink:#1b2430; --muted:#5f6b78; --line:#d5dae0;
+  --accent:#f2a900; --accent-ink:#1b2430; --ok:#2f7d4f; --danger:#b3392f; --chip:#e3e7eb;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171d; --surface:#1b222b; --ink:#e7ebef; --muted:#9aa6b2; --line:#2c3540;
+  --accent:#ffbb1f; --accent-ink:#12171d; --ok:#5cbf85; --danger:#e8746a; --chip:#26303b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171d; --surface:#1b222b; --ink:#e7ebef; --muted:#9aa6b2; --line:#2c3540;
+  --accent:#ffbb1f; --accent-ink:#12171d; --ok:#5cbf85; --danger:#e8746a; --chip:#26303b; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 10px;display:grid;gap:10px}
+h1{font-family:var(--display);font-weight:700;font-size:1.9rem;letter-spacing:.01em;margin:0;line-height:1;display:flex;align-items:center;gap:10px}
+h1 .tape{display:inline-block;width:28px;height:14px;border-radius:3px;background:repeating-linear-gradient(-45deg,var(--accent) 0 6px,var(--ink) 6px 12px)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--chip);border-radius:10px;padding:4px;gap:4px}
+.ptitle{font-family:var(--display);font-size:1.6rem;font-weight:700;margin:0;line-height:1.1;text-wrap:balance;overflow-wrap:anywhere}
+li.proy{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border-bottom:1px solid var(--line)}
+li.proy .open{display:block;text-align:left;border:0;background:transparent;color:var(--ink);padding:14px 2px;cursor:pointer;font:inherit;min-width:0}
+li.proy .open:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+li.proy .open .name::after{content:" ›";color:var(--muted)}
+.pill{display:inline-block;font:700 .72rem var(--body);letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 6px;background:var(--chip);color:var(--muted)}
+.pill.ok{background:var(--ok);color:var(--surface)}
+.pill.wait{background:var(--accent);color:var(--accent-ink)}
+.tabs button{font:600 .85rem var(--body);border:0;border-radius:7px;padding:10px 2px;background:transparent;color:var(--muted);cursor:pointer;min-width:0}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .12)}
+.tabs .n{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:500}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
+label.lbl{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+input[type=text],select{width:100%;font:500 1rem var(--body);padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=text]:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.row2{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.check{display:flex;align-items:center;gap:8px;font-size:.95rem;color:var(--muted)}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+.btn{font:700 1.05rem var(--display);letter-spacing:.04em;text-transform:uppercase;border:0;border-radius:8px;padding:13px 16px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn:focus-visible,.ghost:focus-visible,.tick:focus-visible,.x:focus-visible,.tabs button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ghost{font:600 .85rem var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:6px 10px;cursor:pointer}
+.ghost.danger{color:var(--danger);border-color:currentColor}
+
+main{display:grid;gap:18px;margin-top:6px}
+.group{display:grid;gap:0}
+.ghead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0 2px 6px;border-bottom:2px solid var(--ink)}
+.ghead h2{font-family:var(--display);font-size:1.3rem;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:.03em;min-width:0;overflow-wrap:anywhere}
+.ghead .meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums;flex-shrink:0}
+ul{list-style:none;margin:0;padding:0}
+li.item{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line)}
+.tick{width:30px;height:30px;border-radius:50%;border:2px solid var(--muted);background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--surface);padding:0}
+.done .tick{background:var(--ok);border-color:var(--ok)}
+.tick svg{width:16px;height:16px;opacity:0}.done .tick svg{opacity:1}
+.txt{min-width:0}
+.name{font-weight:600;overflow-wrap:anywhere}
+.done .name{text-decoration:line-through;color:var(--muted)}
+.nota{font-size:.88rem;font-style:italic;color:var(--ink);opacity:.8;overflow-wrap:anywhere}
+.qty{display:inline-block;margin-left:6px;font-family:var(--display);font-weight:600;background:var(--chip);border-radius:4px;padding:0 6px;font-size:.95rem}
+.sub{font-size:.8rem;color:var(--muted)}
+.x{border:0;background:transparent;color:var(--muted);font-size:1.4rem;line-height:1;cursor:pointer;padding:4px 8px;border-radius:6px}
+.urgent .name::before{content:"URGENTE";font:700 .7rem var(--body);letter-spacing:.06em;background:var(--danger);color:#fff;border-radius:4px;padding:2px 5px;margin-right:6px;vertical-align:2px}
+
+.empty{text-align:center;color:var(--muted);padding:28px 12px;border:2px dashed var(--line);border-radius:12px}
+.empty b{display:block;color:var(--ink);font-family:var(--display);font-size:1.25rem;margin-bottom:4px}
+.note{font-size:.9rem;color:var(--muted);padding:10px 12px;background:var(--chip);border-radius:8px}
+
+.bar{position:sticky;bottom:0;padding-block:12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);display:grid}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:10;max-width:calc(100% - 32px)}
+li.inv{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)}
+li.inv input[type=checkbox]{width:24px;height:24px;accent-color:var(--accent)}
+.acts{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.acts .ghost{padding:3px 8px;font-size:.78rem}
+.buybar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:8;display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 6px 20px rgb(0 0 0 / .22);max-width:calc(100% - 32px)}
+.buybar .ghost{padding:12px 14px}
+#view-lista{padding-bottom:90px}
+li.item.hist{grid-template-columns:1fr auto}
+.kebab-wrap{position:relative}
+.kebab{width:36px;height:36px;border:0;border-radius:8px;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.kebab svg{width:20px;height:20px}
+.kebab[aria-expanded="true"],.kebab:hover{background:var(--chip);color:var(--ink)}
+.kebab:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.menu{position:absolute;right:0;top:calc(100% + 4px);z-index:9;min-width:210px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgb(0 0 0 / .2);padding:4px;display:grid}
+.menu button{font:600 .95rem var(--body);text-align:left;border:0;background:transparent;color:var(--ink);padding:12px;border-radius:7px;cursor:pointer}
+.menu button:hover,.menu button:focus-visible{background:var(--chip);outline:none}
+.menu button.danger{color:var(--danger)}
+details summary{cursor:pointer;color:var(--muted);font-weight:600;padding:6px 2px}
+@media (prefers-reduced-motion:no-preference){.tick{transition:background .15s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="tape" aria-hidden="true"></span>Lista de material</h1>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-lista" aria-selected="true">Por comprar <span class="n" id="n-lista"></span></button>
+      <button role="tab" id="tab-proy" aria-selected="false">Proyectos</button>
+      <button role="tab" id="tab-hist" aria-selected="false">Historial</button>
+    </div>
+  </header>
+
+  <p class="note" id="status" hidden></p>
+
+  <!-- LISTA -->
+  <section id="view-lista">
+    <form class="card" id="addForm" autocomplete="off">
+      <div>
+        <label class="lbl" for="f-name">¿Qué hace falta?</label>
+        <input type="text" id="f-name" list="dl-names" placeholder="Ej: discos de corte 125 mm" required>
+      </div>
+      <div class="row2">
+        <div><label class="lbl" for="f-qty">Cantidad</label><input type="text" id="f-qty" placeholder="Ej: 2 cajas"></div>
+        <div><label class="lbl" for="f-sup">Proveedor</label><select id="f-sup"><option value="">Sin indicar</option><option>Ferretería FEKA</option><option>Saltoki</option><option>Otros</option></select></div>
+      </div>
+      <div><label class="lbl" for="f-note">Nota (opcional)</label><input type="text" id="f-note" maxlength="120" placeholder="Ej: ref. 4.5x40 inox, para el portal 3"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 18px">
+        <label class="check"><input type="checkbox" id="f-urg"> Urgente</label>
+      </div>
+      <button class="btn" type="submit">Añadir a la lista</button>
+    </form>
+    <main id="lista"></main>
+    <div class="buybar" id="buyBar" hidden>
+      <button class="ghost" id="buyCancel">Cancelar</button>
+      <button class="btn" id="buyOk">Confirmar compra</button>
+    </div>
+  </section>
+
+
+  <!-- HISTORIAL -->
+  <section id="view-hist" hidden>
+    <main id="hist"></main>
+  </section>
+
+  <!-- PROYECTOS -->
+  <section id="view-proy" hidden>
+    <div id="proyList">
+      <form class="card" id="proyForm" autocomplete="off">
+        <div><label class="lbl" for="p-name">Nuevo proyecto</label><input type="text" id="p-name" placeholder="Ej: Reforma baño Calle Mayor 12" required></div>
+        <button class="btn" type="submit">Crear proyecto</button>
+      </form>
+      <main id="proys"></main>
+    </div>
+    <div id="proyDetail" hidden>
+      <div style="display:grid;gap:10px">
+        <div><button class="ghost" id="proyBack">← Todos los proyectos</button></div>
+        <h2 class="ptitle" id="proyTitle"></h2>
+        <p class="sub" id="proyProgress" style="margin:0"></p>
+      </div>
+      <form class="card" id="matForm" autocomplete="off" style="margin-top:12px">
+        <div><label class="lbl" for="m-name">Material que necesitamos</label><input type="text" id="m-name" list="dl-names" placeholder="Ej: tubo multicapa 16 mm" required></div>
+        <div class="row2">
+          <div><label class="lbl" for="m-qty">Cantidad</label><input type="text" id="m-qty" placeholder="Ej: 20 m"></div>
+          <div><label class="lbl" for="m-sup">Proveedor</label><select id="m-sup"><option value="">Sin indicar</option><option>Ferretería FEKA</option><option>Saltoki</option><option>Otros</option></select></div>
+        </div>
+        <div><label class="lbl" for="m-note">Nota (opcional)</label><input type="text" id="m-note" maxlength="120" placeholder="Ej: que sea de la marca Uponor"></div>
+        <button class="btn" type="submit">Añadir material</button>
+      </form>
+      <main id="mats"></main>
+      <div class="bar" id="matBar" hidden><button class="btn" id="matAdd">Pasar a la lista de compra</button></div>
+    </div>
+  </section>
+</div>
+
+<datalist id="dl-names"></datalist>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const SIN = "Sin proveedor";
+const SUPS = ["Ferretería FEKA", "Saltoki", "Otros"];
+let db = null, user = null, myId = null, canWrite = true;
+let items = [];
+let confirmClear = false;
+
+const norm = s => (s || "").trim().toLowerCase();
+function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2200); }
+function status(msg){ const s = $("#status"); s.textContent = msg || ""; s.hidden = !msg; }
+function ago(ts){
+  if(!ts) return ""; const m = Math.round((Date.now() - ts) / 60000);
+  if(m < 1) return "ahora"; if(m < 60) return "hace " + m + " min";
+  const h = Math.round(m / 60); if(h < 24) return "hace " + h + " h";
+  return new Date(ts).toLocaleDateString("es-ES", {day:"numeric", month:"short"});
+}
+function fail(e){
+  if(e && e.code === "invalid_argument"){ canWrite = false; applyWrite(); status("Tienes acceso de solo lectura. Pide al dueño que te dé permiso de edición."); }
+  else if(e && e.code === "quota_exceeded") toast("La lista está llena. Vacía los comprados.");
+  else toast("No se ha podido guardar. Inténtalo de nuevo.");
+}
+function applyWrite(){
+  ["#addForm", "#proyForm", "#matForm"].forEach(s => $(s).hidden = !canWrite);
+}
+
+/* Tabs */
+const TABS = ["lista", "proy", "hist"];
+function setTab(t){
+  for(const k of TABS){ $("#tab-" + k).setAttribute("aria-selected", k === t); $("#view-" + k).hidden = k !== t; }
+  try{ localStorage.setItem("tab", t); }catch(_){}
+}
+for(const k of TABS) $("#tab-" + k).onclick = () => setTab(k);
+try{ const t = localStorage.getItem("tab"); if(TABS.includes(t)) setTab(t); }catch(_){}
+
+/* Autofill supplier from the last time that material was asked for */
+$("#f-name").addEventListener("change", () => {
+  const h = lastByName($("#f-name").value);
+  if(h && !$("#f-sup").value && SUPS.includes(h.supplier)) $("#f-sup").value = h.supplier;
+});
+
+$("#addForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if(!db) return;
+  const name = $("#f-name").value.trim(); if(!name) return;
+  const supplier = $("#f-sup").value.trim(), qty = $("#f-qty").value.trim();
+  try{
+    await db.collection("items").add({name, qty, supplier, note: $("#f-note").value.trim(), urgent: $("#f-urg").checked, done:false, by: myId, at: Date.now()});
+    e.target.reset(); $("#f-name").focus(); toast("Añadido: " + name);
+  }catch(err){ fail(err); }
+});
+
+
+
+async function toggleDone(it){
+  try{
+    await db.doc("items/" + it.id).update({done: !it.done, doneAt: !it.done ? Date.now() : null, doneBy: !it.done ? myId : null});
+    toast(it.done ? "Devuelto a Por comprar: " + it.name : "Comprado. Pasa al historial");
+  }catch(err){ fail(err); }
+}
+async function removeItem(it){ try{ await db.doc("items/" + it.id).delete(); }catch(err){ fail(err); } }
+
+
+const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8.5l3 3 7-7"/></svg>';
+
+/* Tick marks a pending item as selected; the bottom "Confirmar" button moves the selection to the historial */
+const buySel = new Set();
+function updateBuyBar(){
+  $("#buyBar").hidden = buySel.size === 0;
+  $("#buyOk").textContent = "Confirmar compra (" + buySel.size + ")";
+}
+$("#buyCancel").onclick = () => { buySel.clear(); renderLista(); };
+$("#buyOk").onclick = async () => {
+  const pick = items.filter(i => buySel.has(i.id) && !i.done);
+  buySel.clear(); updateBuyBar();
+  let n = 0;
+  for(const it of pick){
+    try{ await db.doc("items/" + it.id).update({done:true, doneAt: Date.now(), doneBy: myId}); n++; }
+    catch(err){ fail(err); break; }
+  }
+  if(n) toast(n === 1 ? "1 compra pasada al historial" : n + " compras pasadas al historial");
+};
+
+function itemRow(it, names){
+  const li = el("li", "item" + (buySel.has(it.id) ? " done" : "") + (it.urgent ? " urgent" : ""));
+  const b = el("button", "tick"); b.innerHTML = CHECK;
+  b.setAttribute("aria-label", "Marcar comprado: " + it.name);
+  b.setAttribute("aria-pressed", buySel.has(it.id));
+  b.disabled = !canWrite;
+  b.onclick = () => {
+    buySel.has(it.id) ? buySel.delete(it.id) : buySel.add(it.id);
+    li.classList.toggle("done", buySel.has(it.id)); b.setAttribute("aria-pressed", buySel.has(it.id));
+    updateBuyBar();
+  };
+  const t = el("div", "txt");
+  const n = el("div", "name", it.name); if(it.qty) n.append(el("span", "qty", it.qty));
+  const nota = it.note ? el("div", "nota", it.note) : "";
+  const who = it.done ? (names[it.doneBy] || "Alguien") : (names[it.by] || "Alguien");
+  t.append(n, nota, el("div", "sub", (it.project ? "Proyecto: " + it.project + " · " : "") + (it.done ? "Comprado por " : "Pedido por ") + who + " · " + ago(it.done ? it.doneAt : it.at)));
+  const x = el("button", "x", "×"); x.setAttribute("aria-label", "Quitar " + it.name); x.hidden = !canWrite; x.onclick = () => removeItem(it);
+  li.append(b, t, x); return li;
+}
+
+async function renderLista(){
+  const root = $("#lista");
+  const pend = items.filter(i => !i.done), done = items.filter(i => i.done);
+  $("#n-lista").textContent = pend.length ? "(" + pend.length + ")" : "";
+  const ids = [...new Set(items.flatMap(i => [i.by, i.doneBy]).filter(Boolean))];
+  const names = {};
+  if(user && ids.length){ const ps = await user.profiles(ids); for(const id of ids) names[id] = (ps[id] && ps[id].name) || ""; }
+
+  for(const id of [...buySel]) if(!pend.some(i => i.id === id)) buySel.delete(id);
+  updateBuyBar();
+  root.replaceChildren();
+  if(!pend.length){
+    const e = el("div", "empty"); e.append(el("b", null, "No falta nada"));
+    e.append(document.createTextNode("Añade arriba lo que haga falta, o pasa material desde un proyecto."));
+    root.append(e);
+  }
+  const groups = {};
+  for(const i of pend){ const k = i.supplier || SIN; (groups[k] = groups[k] || []).push(i); }
+  const keys = Object.keys(groups).sort((a, b) => a === SIN ? 1 : b === SIN ? -1 : a.localeCompare(b, "es"));
+  for(const k of keys){
+    const list = groups[k].sort((a, b) => (b.urgent - a.urgent) || (a.at - b.at));
+    const g = el("section", "group"), h = el("div", "ghead");
+    const meta = el("div", "meta"); meta.append(el("span", null, list.length + (list.length === 1 ? " artículo" : " artículos")));
+    h.append(el("h2", null, k), meta);
+    const ul = el("ul"); list.forEach(i => ul.append(itemRow(i, names)));
+    g.append(h, ul); root.append(g);
+  }
+  renderHist(done, names);
+  updateDatalists();
+}
+
+function dayKey(ts){ const d = new Date(ts); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+function dayLabel(ts){
+  const today = new Date(), y = new Date(); y.setDate(today.getDate() - 1);
+  if(dayKey(ts) === dayKey(today)) return "Hoy";
+  if(dayKey(ts) === dayKey(y)) return "Ayer";
+  const s = new Date(ts).toLocaleDateString("es-ES", {weekday:"long", day:"numeric", month:"long", year: new Date(ts).getFullYear() === today.getFullYear() ? undefined : "numeric"});
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+const DOTS = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+let histMenu = null, histDel = false;
+document.addEventListener("click", () => {
+  if(histMenu){ histMenu = null; histDel = false; renderLista(); }
+  if(proyMenu){ proyMenu = null; proyDel = false; renderProy(); }
+});
+function renderHist(done, names){
+  const root = $("#hist");
+  root.replaceChildren();
+  if(!done.length){
+    const e = el("div", "empty"); e.append(el("b", null, "Todavía no hay compras"));
+    e.append(document.createTextNode("Cuando marques algo como comprado en Por comprar, aparecerá aquí ordenado por día."));
+    root.append(e); return;
+  }
+  const days = {};
+  for(const i of done.slice().sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0))){
+    const k = dayKey(i.doneAt || i.at || 0); (days[k] = days[k] || []).push(i);
+  }
+  for(const k of Object.keys(days)){
+    const list = days[k];
+    const g = el("section", "group"), h = el("div", "ghead");
+    h.append(el("h2", null, dayLabel(list[0].doneAt || list[0].at || 0)), el("div", "meta", list.length + (list.length === 1 ? " compra" : " compras")));
+    const ul = el("ul");
+    for(const it of list){
+      const li = el("li", "item hist");
+      const t = el("div", "txt");
+      const n = el("div", "name", it.name); if(it.qty) n.append(el("span", "qty", it.qty));
+      const nota = it.note ? el("div", "nota", it.note) : "";
+      const hora = it.doneAt ? new Date(it.doneAt).toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"}) : "";
+      const parts = [it.supplier || SIN, it.project ? "Proyecto: " + it.project : "", "Comprado por " + (names[it.doneBy] || "Alguien"), hora].filter(Boolean);
+      t.append(n, nota, el("div", "sub", parts.join(" · ")));
+      const wrap = el("div", "kebab-wrap");
+      const b = el("button", "kebab"); b.innerHTML = DOTS;
+      b.setAttribute("aria-label", "Opciones: " + it.name);
+      b.setAttribute("aria-expanded", histMenu === it.id);
+      b.hidden = !canWrite;
+      b.onclick = e => { e.stopPropagation(); histMenu = histMenu === it.id ? null : it.id; histDel = false; renderLista(); };
+      wrap.append(b);
+      if(histMenu === it.id){
+        const m = el("div", "menu"); m.setAttribute("role", "menu");
+        m.onclick = e => e.stopPropagation();
+        const back = el("button", null, "Devolver a Por comprar"); back.setAttribute("role", "menuitem");
+        back.onclick = () => { histMenu = null; toggleDone(it); };
+        const del = el("button", "danger", histDel ? "Sí, eliminar del todo" : "Eliminar"); del.setAttribute("role", "menuitem");
+        del.onclick = async () => {
+          if(!histDel){ histDel = true; renderLista(); return; }
+          histMenu = null; histDel = false;
+          try{ await db.doc("items/" + it.id).delete(); toast("Eliminado del historial"); }catch(err){ fail(err); }
+        };
+        m.append(back, del); wrap.append(m);
+      }
+      li.append(t, wrap); ul.append(li);
+    }
+    g.append(h, ul); root.append(g);
+  }
+}
+
+function lastByName(name){
+  return items.filter(i => norm(i.name) === norm(name)).sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+}
+function updateDatalists(){
+  const dn = $("#dl-names"); const seen = new Map(); for(const i of items) if(!seen.has(norm(i.name))) seen.set(norm(i.name), i.name);
+  dn.replaceChildren(...[...seen.values()].sort((a, b) => a.localeCompare(b, "es")).map(s => { const o = el("option"); o.value = s; return o; }));
+}
+
+/* Proyectos: each project keeps its own material list in proyectos/<id>/materiales */
+let proys = [], openProy = null, mats = [], matsUnsub = null, proyMenu = null, proyDel = false, proySeen = null;
+const matSel = new Set(), matConfirm = new Set();
+const connLost = () => status("Se ha perdido la conexión con la lista. Recarga la página.");
+const matPath = () => "proyectos/" + openProy + "/materiales";
+
+$("#proyForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if(!db) return;
+  const name = $("#p-name").value.trim(); if(!name) return;
+  try{ const ref = await db.collection("proyectos").add({name, at: Date.now(), by: myId}); e.target.reset(); openProject(ref.id); }
+  catch(err){ fail(err); }
+});
+$("#proyBack").onclick = () => closeProject();
+
+function openProject(id){
+  if(matsUnsub) matsUnsub();
+  openProy = id; mats = []; matSel.clear(); matConfirm.clear();
+  matsUnsub = db.collection(matPath()).onSnapshot(s => { mats = s.docs.map(d => ({id:d.id, ...d.data()})); renderProy(); }, connLost);
+  renderProy(); window.scrollTo(0, 0);
+}
+function closeProject(){
+  if(matsUnsub) matsUnsub();
+  matsUnsub = null; openProy = null; mats = []; matSel.clear();
+  renderProy();
+}
+
+$("#matForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if(!db || !openProy) return;
+  const name = $("#m-name").value.trim(); if(!name) return;
+  try{
+    await db.collection(matPath()).add({name, qty: $("#m-qty").value.trim(), supplier: $("#m-sup").value, note: $("#m-note").value.trim(), at: Date.now()});
+    e.target.reset(); $("#m-name").focus();
+  }catch(err){ fail(err); }
+});
+$("#m-name").addEventListener("change", () => {
+  const h = lastByName($("#m-name").value);
+  if(h && !$("#m-sup").value && SUPS.includes(h.supplier)) $("#m-sup").value = h.supplier;
+});
+
+const matItem = m => m.itemId ? items.find(i => i.id === m.itemId) : null;
+
+$("#matAdd").onclick = async () => {
+  const p = proys.find(p => p.id === openProy); if(!p) return;
+  const pick = mats.filter(m => matSel.has(m.id) && !matItem(m));
+  matSel.clear(); renderProy();
+  let n = 0;
+  for(const m of pick){
+    try{
+      const ref = await db.collection("items").add({name: m.name, qty: m.qty || "", supplier: m.supplier || "", note: m.note || "", project: p.name, projectId: p.id, urgent:false, done:false, by: myId, at: Date.now()});
+      await db.doc(matPath() + "/" + m.id).update({itemId: ref.id});
+      n++;
+    }catch(err){ fail(err); break; }
+  }
+  if(n) toast(n === 1 ? "1 material pasado a Por comprar" : n + " materiales pasados a Por comprar");
+};
+
+async function removeMat(m){
+  if(!matConfirm.has(m.id)){ matConfirm.add(m.id); renderProy(); setTimeout(() => { matConfirm.delete(m.id); renderProy(); }, 4000); return; }
+  matConfirm.delete(m.id);
+  try{ await db.doc(matPath() + "/" + m.id).delete(); }catch(err){ fail(err); }
+}
+async function removeProject(p){
+  try{
+    const s = await db.collection("proyectos/" + p.id + "/materiales").get();
+    for(const d of s.docs) await db.doc("proyectos/" + p.id + "/materiales/" + d.id).delete();
+    await db.doc("proyectos/" + p.id).delete();
+    toast("Proyecto eliminado");
+  }catch(err){ fail(err); }
+}
+
+function renderProy(){
+  const p = openProy ? proys.find(p => p.id === openProy) : null;
+  if(p) proySeen = openProy;
+  if(openProy && !p && proySeen === openProy){ closeProject(); return; }   // deleted by someone else
+  $("#proyList").hidden = !!openProy; $("#proyDetail").hidden = !openProy;
+  if(!openProy){
+    const root = $("#proys"); root.replaceChildren();
+    if(!proys.length){
+      const e = el("div", "empty"); e.append(el("b", null, "Sin proyectos"));
+      e.append(document.createTextNode("Crea un proyecto para cada obra o trabajo y apunta dentro el material que vais a necesitar."));
+      root.append(e); return;
+    }
+    const ul = el("ul");
+    for(const p of proys.slice().sort((a, b) => (b.at || 0) - (a.at || 0))){
+      const li = el("li", "proy");
+      const o = el("button", "open"); o.onclick = () => openProject(p.id);
+      o.append(el("div", "name", p.name), el("div", "sub", "Creado " + ago(p.at)));
+      const wrap = el("div", "kebab-wrap");
+      const b = el("button", "kebab"); b.innerHTML = DOTS; b.hidden = !canWrite;
+      b.setAttribute("aria-label", "Opciones: " + p.name); b.setAttribute("aria-expanded", proyMenu === p.id);
+      b.onclick = e => { e.stopPropagation(); proyMenu = proyMenu === p.id ? null : p.id; proyDel = false; renderProy(); };
+      wrap.append(b);
+      if(proyMenu === p.id){
+        const m = el("div", "menu"); m.setAttribute("role", "menu"); m.onclick = e => e.stopPropagation();
+        const del = el("button", "danger", proyDel ? "Sí, eliminar proyecto y su material" : "Eliminar proyecto"); del.setAttribute("role", "menuitem");
+        del.onclick = () => { if(!proyDel){ proyDel = true; renderProy(); return; } proyMenu = null; proyDel = false; removeProject(p); };
+        m.append(del); wrap.append(m);
+      }
+      li.append(o, wrap); ul.append(li);
+    }
+    $("#proys").append(ul);
+    return;
+  }
+  $("#proyTitle").textContent = p ? p.name : "";
+  const bought = mats.filter(m => { const i = matItem(m); return i && i.done; }).length;
+  const listed = mats.filter(m => { const i = matItem(m); return i && !i.done; }).length;
+  $("#proyProgress").textContent = mats.length
+    ? mats.length + (mats.length === 1 ? " material" : " materiales") + " · " + bought + " comprado" + (bought === 1 ? "" : "s") + " · " + listed + " en la lista"
+    : "";
+  const root = $("#mats"); root.replaceChildren();
+  if(!mats.length){
+    const e = el("div", "empty"); e.append(el("b", null, "Aún no hay material"));
+    e.append(document.createTextNode("Apunta arriba lo que vais a necesitar. Luego marca lo que haya que comprar y pásalo a la lista."));
+    root.append(e);
+  } else {
+    const ul = el("ul");
+    for(const m of mats.slice().sort((a, b) => (a.at || 0) - (b.at || 0))){
+      const it = matItem(m);
+      if(it) matSel.delete(m.id);
+      const li = el("li", "inv");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.id = "mat-" + m.id;
+      cb.checked = !!(it && it.done) || matSel.has(m.id); cb.disabled = !!it || !canWrite;
+      cb.setAttribute("aria-label", "Comprar " + m.name);
+      cb.onchange = () => { cb.checked ? matSel.add(m.id) : matSel.delete(m.id); updateMatBar(); };
+      const t = el("div", "txt");
+      const lab = document.createElement("label"); lab.htmlFor = cb.id; lab.className = "name"; lab.textContent = m.name;
+      if(m.qty) lab.append(el("span", "qty", m.qty));
+      const mnota = m.note ? el("div", "nota", m.note) : "";
+      t.append(lab, mnota);
+      const sub = el("div", "sub");
+      if(it) sub.append(el("span", "pill " + (it.done ? "ok" : "wait"), it.done ? "Comprado" : "En la lista"), " ");
+      if(m.supplier) sub.append(m.supplier);
+      if(sub.childNodes.length) t.append(sub);
+      const right = el("div");
+      if(canWrite){
+        const x = el("button", "ghost danger", matConfirm.has(m.id) ? "¿Seguro?" : "Quitar"); x.onclick = () => removeMat(m);
+        right.append(x);
+      }
+      li.append(cb, t, right); ul.append(li);
+    }
+    root.append(ul);
+  }
+  updateMatBar();
+}
+function updateMatBar(){
+  $("#matBar").hidden = matSel.size === 0;
+  $("#matAdd").textContent = "Pasar " + matSel.size + (matSel.size === 1 ? " material" : " materiales") + " a la lista de compra";
+}
+
+renderLista(); renderProy();
+
+(async () => {
+  if(!window.claude){ status("Abre esta página desde claude.ai con tu cuenta para usar la lista compartida."); return; }
+  [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+  if(!db){ status("No se puede cargar la lista. Entra con tu cuenta de Claude para verla."); canWrite = false; applyWrite(); return; }
+  if(user){
+    myId = await user.id();
+    const w = await user.can("data.write");
+    if(w === false){ canWrite = false; status("Tienes acceso de solo lectura. Pide al dueño que te dé permiso de edición."); }
+  }
+  applyWrite();
+  const snapErr = () => status("Se ha perdido la conexión con la lista. Recarga la página.");
+  db.collection("items").onSnapshot(s => { items = s.docs.map(d => ({id:d.id, ...d.data()})); renderLista(); renderProy(); }, snapErr);
+  db.collection("proyectos").onSnapshot(s => { proys = s.docs.map(d => ({id:d.id, ...d.data()})); renderProy(); }, snapErr);
+})();
+</script>
